@@ -73,7 +73,7 @@ class SubtokenVocab(TokenVocab):
 
     self.placeholder = None
     with tf.device('/cpu:0'):
-      with tf.variable_scope(self.name.title()):
+      with tf.compat.v1.variable_scope(self.name.title()):
         self._embeddings = tf.Variable(self._embeddings_array, name='Embeddings', dtype=tf.float32, trainable=True)
     self._multibucket.reset_placeholders()
     return
@@ -84,7 +84,7 @@ class SubtokenVocab(TokenVocab):
     
     placeholder = self.generate_placeholder() if placeholder is None else placeholder
     embeddings = self.multibucket(self, keep_prob=self.embed_keep_prob, moving_params=moving_params)
-    return tf.nn.embedding_lookup(embeddings, placeholder)
+    return tf.nn.embedding_lookup(params=embeddings, ids=placeholder)
   
   #=============================================================
   def count(self):

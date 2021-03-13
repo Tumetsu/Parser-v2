@@ -70,7 +70,7 @@ class TokenVocab(BaseVocab):
     self.placeholder = None
     del self._embeddings
     with tf.device('/cpu:0'):
-      with tf.variable_scope(self.name.title()):
+      with tf.compat.v1.variable_scope(self.name.title()):
         self._embeddings = tf.Variable(self._embeddings_array, name='Embeddings', dtype=tf.float32, trainable=True)
     return
 

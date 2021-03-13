@@ -61,19 +61,19 @@ class Zipf(Configurable):
     """ """
     
     radam_optimizer = RadamOptimizer.from_configurable(self, learning_rate=1e-1, decay_steps=500)
-    x = tf.placeholder(tf.float32, shape=(None,1), name='x')
-    y = tf.placeholder(tf.float32, shape=(None,1), name='y')
+    x = tf.compat.v1.placeholder(tf.float32, shape=(None,1), name='x')
+    y = tf.compat.v1.placeholder(tf.float32, shape=(None,1), name='y')
     def affine(a, b):
-      return a * tf.log(x) + b
-    a = tf.get_variable('a', shape=self.n_zipfs, dtype=tf.float32, initializer=tf.random_normal_initializer())
-    b = tf.get_variable('b', shape=self.n_zipfs, dtype=tf.float32, initializer=tf.random_normal_initializer())
-    s = tf.get_variable('s', shape=self.n_zipfs, dtype=tf.float32, initializer=tf.random_uniform_initializer(-2,-.5))
-    t = tf.get_variable('t', shape=self.n_zipfs, dtype=tf.float32, initializer=tf.random_normal_initializer())
+      return a * tf.math.log(x) + b
+    a = tf.compat.v1.get_variable('a', shape=self.n_zipfs, dtype=tf.float32, initializer=tf.compat.v1.random_normal_initializer())
+    b = tf.compat.v1.get_variable('b', shape=self.n_zipfs, dtype=tf.float32, initializer=tf.compat.v1.random_normal_initializer())
+    s = tf.compat.v1.get_variable('s', shape=self.n_zipfs, dtype=tf.float32, initializer=tf.compat.v1.random_uniform_initializer(-2,-.5))
+    t = tf.compat.v1.get_variable('t', shape=self.n_zipfs, dtype=tf.float32, initializer=tf.compat.v1.random_normal_initializer())
     w = tf.expand_dims(tf.nn.softmax(affine(a, b)), axis=1, name='w')
     z = tf.expand_dims(affine(s, t), axis=2, name='z')
     yhat = tf.squeeze(tf.matmul(w, z), axis=2, name='yhat')
-    ell = tf.reduce_mean((tf.log(y) - yhat)**2 / 2, name='ell')
-    ell += tf.reduce_mean((tf.reduce_max(w, axis=0) - 1)**2 / 2)
+    ell = tf.reduce_mean(input_tensor=(tf.math.log(y) - yhat)**2 / 2, name='ell')
+    ell += tf.reduce_mean(input_tensor=(tf.reduce_max(input_tensor=w, axis=0) - 1)**2 / 2)
     minimize = radam_optimizer.minimize(ell, name='minimize')
     return x, y, ell, minimize
     
@@ -114,8 +114,8 @@ class Zipf(Configurable):
     losses = []
     with tf.Graph().as_default() as graph:
       x, y, ell, minimize = self()
-      with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+      with tf.compat.v1.Session() as sess:
+        sess.run(tf.compat.v1.global_variables_initializer())
         if verbose:
           print('Fitting multi-zipfian distribution',file=sys.stderr)
         for i in range(self.max_train_iters):

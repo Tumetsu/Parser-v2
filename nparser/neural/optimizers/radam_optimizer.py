@@ -71,7 +71,7 @@ class RadamOptimizer(BaseOptimizer):
       v_bar_t = 1
     
     s_t = self.learning_rate * m_bar_t / v_bar_t
-    cache['s_t'] = tf.where(tf.is_finite(s_t), s_t, tf.zeros_like(s_t))
+    cache['s_t'] = tf.compat.v1.where(tf.math.is_finite(s_t), s_t, tf.zeros_like(s_t))
     return cache
   
   #=============================================================
@@ -80,7 +80,7 @@ class RadamOptimizer(BaseOptimizer):
     
     x_tm1, g_t, idxs = cache['x_tm1'], cache['g_t'], cache['idxs']
     idxs, idxs_ = tf.unique(idxs)
-    g_t_ = tf.unsorted_segment_sum(g_t, idxs_, tf.size(idxs))
+    g_t_ = tf.math.unsorted_segment_sum(g_t, idxs_, tf.size(input=idxs))
     updates = cache['updates']
     
     if self.mu > 0:
@@ -100,7 +100,7 @@ class RadamOptimizer(BaseOptimizer):
       v_bar_t_ = 1
     
     s_t_ = self.learning_rate * m_bar_t_ / v_bar_t_
-    cache['s_t'] = tf.where(tf.is_finite(s_t_), s_t_, tf.zeros_like(s_t_))
+    cache['s_t'] = tf.compat.v1.where(tf.math.is_finite(s_t_), s_t_, tf.zeros_like(s_t_))
     cache['g_t'] = g_t_
     cache['idxs'] = idxs
     return cache

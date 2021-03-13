@@ -50,7 +50,7 @@ class BaseOptimizer(Configurable):
     """ """
     
     # Error checking
-    var_list = tf.trainable_variables()
+    var_list = tf.compat.v1.trainable_variables()
     for x_tm1 in var_list:
       if not isinstance(x_tm1, tf.Variable):
         raise TypeError("Argument is not a tf.Variable: %s" % x_tm1)
@@ -60,8 +60,7 @@ class BaseOptimizer(Configurable):
       raise ValueError('Loss is not float32')
     
     # Compute gradients
-    grads = tf.gradients(loss, var_list,
-                                colocate_gradients_with_ops=True,
+    grads = tf.gradients(ys=loss, xs=var_list,
                                 gate_gradients=True,
                                 aggregation_method=2)
     for x_tm1, g_t in zip(var_list, grads):
@@ -72,21 +71,21 @@ class BaseOptimizer(Configurable):
     # Apply gradients
     with tf.control_dependencies(None):
       self._init_acc(var_list, grads)
-    with tf.name_scope(name, self.name.title(), []) as name:
+    with tf.compat.v1.name_scope(name, self.name.title(), []) as name:
       caches = [cache for cache in self._prepare(var_list, grads) if cache['g_t'] is not None]
       for cache in caches:
         x_tm1, g_t = cache['x_tm1'], cache['g_t']
-        with tf.name_scope("update_" + x_tm1.op.name), tf.device(x_tm1.device):
+        with tf.compat.v1.name_scope("update_" + x_tm1.op.name), tf.device(x_tm1.device):
           if isinstance(g_t, tf.Tensor):
-            cache['g_t'] = tf.where(tf.is_finite(g_t), g_t, tf.zeros_like(g_t))
+            cache['g_t'] = tf.compat.v1.where(tf.math.is_finite(g_t), g_t, tf.zeros_like(g_t))
             self._apply_dense(cache)
           else:
-            cache['g_t'] = tf.where(tf.is_finite(g_t.values), g_t.values, tf.zeros_like(g_t.values))
+            cache['g_t'] = tf.compat.v1.where(tf.math.is_finite(g_t.values), g_t.values, tf.zeros_like(g_t.values))
             cache['idxs'] = g_t.indices
             self._apply_sparse(cache)
       with tf.control_dependencies([self._finish(caches)]):
         with tf.device(self.global_step.device):
-          return tf.assign_add(self.global_step, 1, name=name).op
+          return tf.compat.v1.assign_add(self.global_step, 1, name=name).op
   
   #=============================================================
   def _init_acc(self, var_list, grads):
@@ -94,8 +93,8 @@ class BaseOptimizer(Configurable):
     
     for x_tm1, g_t in zip(var_list, grads):
       if self.chi > 0:
-        tf.add_to_collection(self.get_accumulator(x_tm1, 'x'),
-                             tf.GraphKeys.MOVING_AVERAGE_VARIABLES)
+        tf.compat.v1.add_to_collection(self.get_accumulator(x_tm1, 'x'),
+                             tf.compat.v1.GraphKeys.MOVING_AVERAGE_VARIABLES)
         shape = self.get_variable_shape(x_tm1)
         if isinstance(g_t, tf.Tensor):
           self.get_accumulator(x_tm1, 'x/tm1', [])
@@ -143,7 +142,7 @@ class BaseOptimizer(Configurable):
     if x_tm1 not in accumulator:
       new_name = '%s/%s' % (self.name.title(), acc_name)
       zeros = tf.zeros(shape, dtype=x_tm1.dtype)
-      with tf.name_scope('%s/%s' % (x_tm1.op.name, new_name)) as scope:
+      with tf.compat.v1.name_scope('%s/%s' % (x_tm1.op.name, new_name)) as scope:
         with tf.device(x_tm1.device):
           accumulator[x_tm1] = b_tm1 = tf.Variable(zeros, name=scope, trainable=False)
           if isinstance(x_tm1, tf.Variable) and x_tm1._save_slice_info:
@@ -162,14 +161,14 @@ class BaseOptimizer(Configurable):
     
     b_tm1 = self.get_accumulator(x_tm1, '%s' % name)
     tm1 = self.get_accumulator(x_tm1, '%s/tm1' % name, shape=[])
-    t = tf.assign_add(tm1, 1)
+    t = tf.compat.v1.assign_add(tm1, 1)
     if beta < 1:
-      beta_t = tf.convert_to_tensor(beta, name='%s/decay' % name)
+      beta_t = tf.convert_to_tensor(value=beta, name='%s/decay' % name)
       beta_t = beta_t * (1-beta**tm1) / (1-beta**t)
     else:
       beta_t = tm1 / t
-    b_t = tf.assign(b_tm1, beta_t*b_tm1)
-    b_t = tf.assign_add(b_t, (1-beta_t)*a_t)
+    b_t = tf.compat.v1.assign(b_tm1, beta_t*b_tm1)
+    b_t = tf.compat.v1.assign_add(b_t, (1-beta_t)*a_t)
     return b_t, t
   
   #=============================================================
@@ -181,15 +180,15 @@ class BaseOptimizer(Configurable):
     shape = self.get_variable_shape(x_tm1)
     tm1 = self.get_accumulator(x_tm1, '%s/tm1' % name, shape=[shape[0]]+[1]*(len(shape)-1))
     tm1_ = tf.gather(tm1, idxs)
-    t = tf.scatter_add(tm1, idxs, tf.ones_like(tm1_))
+    t = tf.compat.v1.scatter_add(tm1, idxs, tf.ones_like(tm1_))
     t_ = tf.gather(t, idxs)
     if beta < 1:
-      beta_t = tf.convert_to_tensor(beta, name='%s/decay' % name)
+      beta_t = tf.convert_to_tensor(value=beta, name='%s/decay' % name)
       beta_t_ = beta_t * (1-beta_t**tm1_) / (1-beta_t**t_)
     else:
       beta_t_ = tm1_/t_
-    b_t = tf.scatter_update(b_tm1, idxs, beta_t_*b_tm1_)
-    b_t = tf.scatter_add(b_t, idxs, (1-beta_t_)*a_t_)
+    b_t = tf.compat.v1.scatter_update(b_tm1, idxs, beta_t_*b_tm1_)
+    b_t = tf.compat.v1.scatter_add(b_t, idxs, (1-beta_t_)*a_t_)
     return b_t, t
     
   #=============================================================
@@ -206,15 +205,15 @@ class BaseOptimizer(Configurable):
       x_tm1 = cache['x_tm1']
       s_t = cache['s_t']
       updates = cache['updates']
-      with tf.name_scope('update_' + x_tm1.op.name), tf.device(x_tm1.device):
+      with tf.compat.v1.name_scope('update_' + x_tm1.op.name), tf.device(x_tm1.device):
         if 'idxs' in cache:
           idxs = cache['idxs']
-          x_t = tf.scatter_sub(x_tm1, idxs, s_t)
+          x_t = tf.compat.v1.scatter_sub(x_tm1, idxs, s_t)
           if self.chi > 0:
             x_t_ = tf.gather(x_t, idxs)
             x_bar_t, t_x_bar = self._sparse_moving_average(x_tm1, idxs, x_t_, 'x', beta=self.chi)
         else:
-          x_t = tf.assign_sub(x_tm1, s_t)
+          x_t = tf.compat.v1.assign_sub(x_tm1, s_t)
           if self.chi > 0:
             x_bar_t, t_x_bar = self._dense_moving_average(x_tm1, x_t, 'x', beta=self.chi)
       updates.append(x_t)
@@ -245,15 +244,15 @@ class BaseOptimizer(Configurable):
     
     name_map = {}
     if moving_avg_variables is None:
-      moving_avg_variables = tf.trainable_variables()
-      moving_avg_variables += tf.moving_average_variables()
+      moving_avg_variables = tf.compat.v1.trainable_variables()
+      moving_avg_variables += tf.compat.v1.moving_average_variables()
     # Remove duplicates
     moving_avg_variables = set(moving_avg_variables)
     # Collect all the variables with moving average,
     for v in moving_avg_variables:
       name_map[self.average_name(v)] = v
     # Make sure we restore variables without moving average as well.
-    for v in list(set(tf.all_variables()) - moving_avg_variables):
+    for v in list(set(tf.compat.v1.all_variables()) - moving_avg_variables):
       if v.op.name not in name_map:
         name_map[v.op.name] = v
     return name_map

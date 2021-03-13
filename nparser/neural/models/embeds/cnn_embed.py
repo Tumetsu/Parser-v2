@@ -35,10 +35,10 @@ class CNNEmbed(BaseEmbed):
     # (n x b x d)
     embeddings = super(CNNEmbed, self).__call__(vocab, **kwargs)
     # (n x b x d) -> (n x b x h)
-    with tf.variable_scope('CNN'):
+    with tf.compat.v1.variable_scope('CNN'):
       conv = self.CNN(embeddings, self.window_size, self.conv_size)
     # (n x b x h) -> (n x h)
-    hidden = tf.reduce_max(conv, axis=1)
+    hidden = tf.reduce_max(input_tensor=conv, axis=1)
     # (n x h) -> (n x o)
     linear = self.linear(hidden, vocab.token_embed_size)
     return linear 

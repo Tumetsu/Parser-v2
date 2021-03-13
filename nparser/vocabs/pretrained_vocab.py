@@ -56,12 +56,12 @@ class PretrainedVocab(BaseVocab):
     
     embeddings = super(PretrainedVocab, self).__call__(placeholder, moving_params=moving_params)
     # (n x b x d') -> (n x b x d)
-    with tf.variable_scope(self.name.title()):
+    with tf.compat.v1.variable_scope(self.name.title()):
       matrix = linalg.linear(embeddings, self.token_embed_size, moving_params=moving_params)
       if moving_params is None:
-        with tf.variable_scope('Linear', reuse=True):
-          weights = tf.get_variable('Weights')
-          tf.losses.add_loss(tf.nn.l2_loss(tf.matmul(tf.transpose(weights), weights) - tf.eye(self.token_embed_size)))
+        with tf.compat.v1.variable_scope('Linear', reuse=True):
+          weights = tf.compat.v1.get_variable('Weights')
+          tf.compat.v1.losses.add_loss(tf.nn.l2_loss(tf.matmul(tf.transpose(a=weights), weights) - tf.eye(self.token_embed_size)))
     return matrix
     #return embeddings # changed in saves2/test8
   
@@ -71,7 +71,7 @@ class PretrainedVocab(BaseVocab):
 
     self.placeholder = None
     with tf.device('/cpu:0'):
-      with tf.variable_scope(self.name.title()):
+      with tf.compat.v1.variable_scope(self.name.title()):
         self._embeddings = tf.Variable(self._embeddings_array, name='Embeddings', dtype=tf.float32, trainable=False)
     return
     

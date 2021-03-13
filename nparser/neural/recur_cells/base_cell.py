@@ -47,10 +47,10 @@ class BaseCell(Configurable):
   def zero_state(self, batch_size, dtype):
     """ """
     
-    zero_state = tf.get_variable('Zero_state',
+    zero_state = tf.compat.v1.get_variable('Zero_state',
                                  shape=self.state_size,
                                  dtype=dtype,
-                                 initializer=tf.zeros_initializer())
+                                 initializer=tf.compat.v1.zeros_initializer())
     state = tf.reshape(tf.tile(zero_state, tf.stack([batch_size])), tf.stack([batch_size, self.state_size]))
     state.set_shape([None, self.state_size])
     return state

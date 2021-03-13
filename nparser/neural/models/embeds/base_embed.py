@@ -54,22 +54,22 @@ class BaseEmbed(NN):
       embeddings = [TokenVocab.__call__(vocab, self.placeholder[:,:,i]) for i, vocab in enumerate(multivocab)]
       embeddings = tf.stack(embeddings, axis=2)
       # (n x b x g x d) -> (n x b x d)
-      with tf.variable_scope('Pre-Attn'):
+      with tf.compat.v1.variable_scope('Pre-Attn'):
         embeddings = self.linear_attention(embeddings)
-      self._tokens_to_keep = tf.to_float(tf.greater(self.placeholder[:,:,0], vocab.PAD))
+      self._tokens_to_keep = tf.cast(tf.greater(self.placeholder[:,:,0], vocab.PAD), dtype=tf.float32)
     else:
       self.generate_placeholder([None,None])
       # (n x b x d)
       embeddings = TokenVocab.__call__(vocab, self.placeholder)
-      self._tokens_to_keep = tf.to_float(tf.greater(self.placeholder, vocab.PAD))
-    self._batch_size = tf.shape(self.placeholder)[0]
-    self._bucket_size = tf.shape(self.placeholder)[1]
-    self._sequence_lengths = tf.to_int32(tf.reduce_sum(self.tokens_to_keep, axis=1))
-    self._n_tokens = tf.reduce_sum(self.sequence_lengths)
+      self._tokens_to_keep = tf.cast(tf.greater(self.placeholder, vocab.PAD), dtype=tf.float32)
+    self._batch_size = tf.shape(input=self.placeholder)[0]
+    self._bucket_size = tf.shape(input=self.placeholder)[1]
+    self._sequence_lengths = tf.cast(tf.reduce_sum(input_tensor=self.tokens_to_keep, axis=1), dtype=tf.int32)
+    self._n_tokens = tf.reduce_sum(input_tensor=self.sequence_lengths)
     return embeddings
   
   #=============================================================
   def generate_placeholder(self, shape):
     if self.placeholder is None:
-      self.placeholder = tf.placeholder(tf.int32, shape=shape, name='%s-bkt' % self.name)
+      self.placeholder = tf.compat.v1.placeholder(tf.int32, shape=shape, name='%s-bkt' % self.name)
     return self.placeholder

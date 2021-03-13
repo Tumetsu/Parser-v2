@@ -80,7 +80,7 @@ class BaseVocab(Configurable):
     """ """
     
     if self.placeholder is None:
-      self.placeholder = tf.placeholder(tf.int32, shape=[None, None], name=self.name)
+      self.placeholder = tf.compat.v1.placeholder(tf.int32, shape=[None, None], name=self.name)
     return self.placeholder
   
   #=============================================================
@@ -89,7 +89,7 @@ class BaseVocab(Configurable):
     
     placeholder = self.generate_placeholder() if placeholder is None else placeholder
     embeddings = self.embeddings if moving_params is None else moving_params.average(self.embeddings)
-    return tf.nn.embedding_lookup(embeddings, placeholder)
+    return tf.nn.embedding_lookup(params=embeddings, ids=placeholder)
   
   #=============================================================
   def setup(self):

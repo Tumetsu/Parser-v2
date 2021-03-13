@@ -33,7 +33,7 @@ class LSTMCell(BaseCell):
   def __call__(self, inputs, state, scope=None):
     """ """
     
-    with tf.variable_scope(scope or type(self).__name__):
+    with tf.compat.v1.variable_scope(scope or type(self).__name__):
       cell_tm1, hidden_tm1 = tf.split(state, 2, axis=1)
       input_list = [inputs, hidden_tm1]
       lin = linear(input_list,

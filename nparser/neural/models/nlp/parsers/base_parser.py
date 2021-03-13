@@ -56,15 +56,15 @@ class BaseParser(NN):
     placeholder = self.vocabs['words'].placeholder
     if len(placeholder.get_shape().as_list()) == 3:
       placeholder = placeholder[:,:,0]
-    self._tokens_to_keep = tf.to_float(tf.greater(placeholder, self.ROOT))
-    self._batch_size = tf.shape(placeholder)[0]
-    self._bucket_size = tf.shape(placeholder)[1]
-    self._sequence_lengths = tf.reduce_sum(tf.to_int32(tf.greater(placeholder, self.PAD)), axis=1)
-    self._n_tokens = tf.to_int32(tf.reduce_sum(self.tokens_to_keep))
+    self._tokens_to_keep = tf.cast(tf.greater(placeholder, self.ROOT), dtype=tf.float32)
+    self._batch_size = tf.shape(input=placeholder)[0]
+    self._bucket_size = tf.shape(input=placeholder)[1]
+    self._sequence_lengths = tf.reduce_sum(input_tensor=tf.cast(tf.greater(placeholder, self.PAD), dtype=tf.int32), axis=1)
+    self._n_tokens = tf.cast(tf.reduce_sum(input_tensor=self.tokens_to_keep), dtype=tf.int32)
     
     top_recur = embed
     for i in range(self.n_layers):
-      with tf.variable_scope('RNN%d' % i):
+      with tf.compat.v1.variable_scope('RNN%d' % i):
         top_recur, _ = self.RNN(top_recur, self.recur_size)
     return top_recur
   

@@ -29,33 +29,33 @@ def birnn(cell, inputs, sequence_length, initial_state_fw=None, initial_state_bw
   """ """
   
   # Forward direction
-  with tf.variable_scope(scope or 'BiRNN_FW') as fw_scope:
+  with tf.compat.v1.variable_scope(scope or 'BiRNN_FW') as fw_scope:
     output_fw, output_state_fw = rnn(cell, inputs, sequence_length, initial_state_fw, ff_keep_prob, recur_keep_prob, dtype, scope=fw_scope)
 
   # Backward direction
-  rev_inputs = tf.reverse_sequence(inputs, sequence_length, 1, 0)
-  with tf.variable_scope(scope or 'BiRNN_BW') as bw_scope:
+  rev_inputs = tf.reverse_sequence(input=inputs, seq_lengths=sequence_length, seq_axis=1, batch_axis=0)
+  with tf.compat.v1.variable_scope(scope or 'BiRNN_BW') as bw_scope:
     output_bw, output_state_bw = rnn(cell, rev_inputs, sequence_length, initial_state_bw, ff_keep_prob, recur_keep_prob, dtype, scope=bw_scope)
-  output_bw = tf.reverse_sequence(output_bw, sequence_length, 1, 0)
+  output_bw = tf.reverse_sequence(input=output_bw, seq_lengths=sequence_length, seq_axis=1, batch_axis=0)
   # Concat each of the forward/backward outputs
   outputs = tf.concat([output_fw, output_bw], 2)
 
-  return outputs, tf.tuple([output_state_fw, output_state_bw])
+  return outputs, tf.tuple(tensors=[output_state_fw, output_state_bw])
 
 #===============================================================
 def rnn(cell, inputs, sequence_length=None, initial_state=None, ff_keep_prob=1., recur_keep_prob=1., dtype=tf.float32, scope=None):
   """ """
   
-  inputs = tf.transpose(inputs, [1, 0, 2])  # (B,T,D) => (T,B,D)
+  inputs = tf.transpose(a=inputs, perm=[1, 0, 2])  # (B,T,D) => (T,B,D)
   
   parallel_iterations = 32
   if sequence_length is not None:
-    sequence_length = tf.to_int32(sequence_length)
+    sequence_length = tf.cast(sequence_length, dtype=tf.int32)
   
-  with tf.variable_scope(scope or 'RNN') as varscope:
+  with tf.compat.v1.variable_scope(scope or 'RNN') as varscope:
     #if varscope.caching_device is None:
     #  varscope.set_caching_device(lambda op: op.device)
-    input_shape = tf.shape(inputs)
+    input_shape = tf.shape(input=inputs)
     time_steps, batch_size, _ = tf.unstack(input_shape, 3)
     const_time_steps, const_batch_size, const_depth = inputs.get_shape().as_list()
     
@@ -68,8 +68,8 @@ def rnn(cell, inputs, sequence_length=None, initial_state=None, ff_keep_prob=1.,
     
     zero_output = tf.zeros(tf.stack([batch_size, cell.output_size]), inputs.dtype)
     if sequence_length is not None:
-      min_sequence_length = tf.reduce_min(sequence_length)
-      max_sequence_length = tf.reduce_max(sequence_length)
+      min_sequence_length = tf.reduce_min(input_tensor=sequence_length)
+      max_sequence_length = tf.reduce_max(input_tensor=sequence_length)
     
     time = tf.constant(0, dtype=tf.int32, name='time')
     
@@ -83,11 +83,11 @@ def rnn(cell, inputs, sequence_length=None, initial_state=None, ff_keep_prob=1.,
     
     if ff_keep_prob < 1:
       noise_shape = tf.stack([1, batch_size, const_depth])
-      inputs = tf.nn.dropout(inputs, ff_keep_prob, noise_shape=noise_shape)
+      inputs = tf.nn.dropout(inputs, 1 - (1 - (1 - (1 - (1 - (ff_keep_prob))))), noise_shape=noise_shape)
       
     if recur_keep_prob < 1:
       ones = tf.ones(tf.stack([batch_size, cell.output_size]))
-      state_dropout = tf.nn.dropout(ones, recur_keep_prob)
+      state_dropout = tf.nn.dropout(ones, 1 - (1 - (1 - (1 - (1 - (recur_keep_prob))))))
       state_dropout = tf.concat([ones] * (cell.state_size // cell.output_size - 1) + [state_dropout], 1)
     else:
       state_dropout = 1
@@ -111,17 +111,17 @@ def rnn(cell, inputs, sequence_length=None, initial_state=None, ff_keep_prob=1.,
         new_output, new_state = _call_cell()
         
         return tf.cond(
-          time < min_sequence_length,
-          lambda: (new_output, new_state),
-          lambda: (tf.where(time >= sequence_length, zero_output, new_output),
-                   tf.where(time >= sequence_length, state, new_state)))
+          pred=time < min_sequence_length,
+          true_fn=lambda: (new_output, new_state),
+          false_fn=lambda: (tf.compat.v1.where(time >= sequence_length, zero_output, new_output),
+                   tf.compat.v1.where(time >= sequence_length, state, new_state)))
       #- - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       
       if sequence_length is not None:
         output, new_state = tf.cond(
-          time >= max_sequence_length,
-          _empty_update,
-          _maybe_copy_some_through)
+          pred=time >= max_sequence_length,
+          true_fn=_empty_update,
+          false_fn=_maybe_copy_some_through)
       else:
         (output, new_state) = _call_cell()
       
@@ -138,5 +138,5 @@ def rnn(cell, inputs, sequence_length=None, initial_state=None, ff_keep_prob=1.,
     
     final_outputs = output_final_ta.stack()
     
-    outputs = tf.transpose(final_outputs, [1, 0, 2])  # (T,B,D) => (B,T,D)
+    outputs = tf.transpose(a=final_outputs, perm=[1, 0, 2])  # (T,B,D) => (B,T,D)
     return outputs, final_state

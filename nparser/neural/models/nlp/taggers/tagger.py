@@ -33,22 +33,22 @@ class Tagger(BaseTagger):
     """ """
     
     top_recur = super(Tagger, self).__call__(vocabs, moving_params=moving_params)
-    int_tokens_to_keep = tf.to_int32(self.tokens_to_keep)
+    int_tokens_to_keep = tf.cast(self.tokens_to_keep, dtype=tf.int32)
     
-    with tf.variable_scope('MLP'):
+    with tf.compat.v1.variable_scope('MLP'):
       mlp = self.MLP(top_recur, self.mlp_size)
     
-    with tf.variable_scope('Tag'):
+    with tf.compat.v1.variable_scope('Tag'):
       logits = self.linear(mlp, len(self.vocabs['tags']))
       probs = tf.nn.softmax(logits)
-      preds = tf.to_int32(tf.argmax(logits, axis=-1))
+      preds = tf.cast(tf.argmax(input=logits, axis=-1), dtype=tf.int32)
       targets = self.vocabs['tags'].placeholder
-      correct = tf.to_int32(tf.equal(preds, targets))*int_tokens_to_keep
-      loss = tf.losses.sparse_softmax_cross_entropy(targets, logits, self.tokens_to_keep)
+      correct = tf.cast(tf.equal(preds, targets), dtype=tf.int32)*int_tokens_to_keep
+      loss = tf.compat.v1.losses.sparse_softmax_cross_entropy(targets, logits, self.tokens_to_keep)
     
     
-    n_correct = tf.reduce_sum(correct)
-    n_seqs_correct = tf.reduce_sum(tf.to_int32(tf.equal(tf.reduce_sum(correct, axis=1), self.sequence_lengths-1)))
+    n_correct = tf.reduce_sum(input_tensor=correct)
+    n_seqs_correct = tf.reduce_sum(input_tensor=tf.cast(tf.equal(tf.reduce_sum(input_tensor=correct, axis=1), self.sequence_lengths-1), dtype=tf.int32))
     
     outputs = {
       'logits': logits,

@@ -56,9 +56,9 @@ class Multibucket(Configurable):
     for i, bucket in enumerate(self):
       if i > 0:
         reuse = True
-      with tf.variable_scope(self.name+'-multibucket', reuse=reuse):
+      with tf.compat.v1.variable_scope(self.name+'-multibucket', reuse=reuse):
         embeddings.append(bucket(vocab, keep_prob=keep_prob, moving_params=moving_params))
-    return tf.nn.embedding_lookup(tf.concat(embeddings, axis=0), self.placeholder)
+    return tf.nn.embedding_lookup(params=tf.concat(embeddings, axis=0), ids=self.placeholder)
   
   #=============================================================
   def reset_placeholders(self):
@@ -72,7 +72,7 @@ class Multibucket(Configurable):
     """ """
     
     if self.placeholder is None:
-      self.placeholder = tf.placeholder(tf.int32, shape=(None,), name=self.name+'-multibucket')
+      self.placeholder = tf.compat.v1.placeholder(tf.int32, shape=(None,), name=self.name+'-multibucket')
     return self.placeholder
   
   #=============================================================

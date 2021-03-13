@@ -33,19 +33,19 @@ class GamaParser(BaseParser):
     """ """
     
     top_recur = super(GamaParser, self).__call__(vocabs, moving_params=moving_params)
-    int_tokens_to_keep = tf.to_int32(self.tokens_to_keep)
+    int_tokens_to_keep = tf.cast(self.tokens_to_keep, dtype=tf.int32)
     
-    with tf.variable_scope('MLP'):
+    with tf.compat.v1.variable_scope('MLP'):
       dep_mlp, head_mlp = self.MLP(top_recur, self.arc_mlp_size + self.rel_mlp_size + 2*self.p_mlp_size,
                                    n_splits=2)
       arc_dep_mlp, rel_dep_mlp, mu_dep_mlp, sigma_dep_mlp = tf.split(dep_mlp, [self.arc_mlp_size, self.rel_mlp_size, self.p_mlp_size, self.p_mlp_size], axis=2)
       arc_head_mlp, rel_head_mlp, mu_head_mlp, sigma_head_mlp = tf.split(head_mlp, [self.arc_mlp_size, self.rel_mlp_size, self.p_mlp_size, self.p_mlp_size], axis=2)
     
-    with tf.variable_scope('dist'):
-      with tf.variable_scope('mu'):
+    with tf.compat.v1.variable_scope('dist'):
+      with tf.compat.v1.variable_scope('mu'):
         # (n x b x d) o (d x 1 x d) o (n x b x d).T -> (n x b x b)
         arc_mus = self.bilinear(mu_dep_mlp, mu_head_mlp, 1)**2
-      with tf.variable_scope('sigma'):
+      with tf.compat.v1.variable_scope('sigma'):
         # (n x b x d) o (d x 1 x d) o (n x b x d).T -> (n x b x b)
         arc_sigmas = self.bilinear(sigma_dep_mlp, sigma_head_mlp, 1, initializer=None)**2 + .1
       # (b x 1)
@@ -53,34 +53,34 @@ class GamaParser(BaseParser):
       # (1 x b)
       j_mat = tf.expand_dims(tf.range(self.bucket_size), 0)
       # (b x 1) - (1 x b) -> (b x b)
-      k_mat = tf.to_float(tf.abs(i_mat - j_mat))
+      k_mat = tf.cast(tf.abs(i_mat - j_mat), dtype=tf.float32)
       
-      arc_logits = -.5*tf.log(2*np.pi * arc_sigmas) - .5*(k_mat-arc_mus)**2 / arc_sigmas
+      arc_logits = -.5*tf.math.log(2*np.pi * arc_sigmas) - .5*(k_mat-arc_mus)**2 / arc_sigmas
       #arc_rs += tf.to_float(k_mat)#tf.to_float(tf.expand_dims(tf.expand_dims(self.sequence_lengths, 1), 1))
       # (b x 1)
       #n_mat = tf.expand_dims(self.sequence_lengths, 1) - 1 - i_mat
       # (b x b) * (n x b x b) - (n x b x b) - (b x b) -> (n x b x b)
       #arc_logits = (tf.lgamma(arc_rs+1) - tf.lgamma(k_mat) - tf.lgamma(arc_rs-k_mat+2) +
       #               k_mat * tf.log(arc_ps) + (arc_rs-k_mat+1)*tf.log(1-arc_ps) )
-    with tf.variable_scope('Arc'):
+    with tf.compat.v1.variable_scope('Arc'):
       # (n x b x d) o (d x 1 x d) o (n x b x d).T -> (n x b x b)
       arc_logits += self.bilinear(arc_dep_mlp, arc_head_mlp, 1, add_bias2=False)
       # (n x b x b)
       arc_probs = tf.nn.softmax(arc_logits)
       # (n x b)
-      arc_preds = tf.to_int32(tf.argmax(arc_logits, axis=-1))
+      arc_preds = tf.cast(tf.argmax(input=arc_logits, axis=-1), dtype=tf.int32)
       # (n x b)
       arc_targets = self.vocabs['heads'].placeholder
       # (n x b)
-      arc_correct = tf.to_int32(tf.equal(arc_preds, arc_targets))*int_tokens_to_keep
+      arc_correct = tf.cast(tf.equal(arc_preds, arc_targets), dtype=tf.int32)*int_tokens_to_keep
       # ()
-      arc_loss = tf.losses.sparse_softmax_cross_entropy(arc_targets, arc_logits, self.tokens_to_keep)
+      arc_loss = tf.compat.v1.losses.sparse_softmax_cross_entropy(arc_targets, arc_logits, self.tokens_to_keep)
     
-    with tf.variable_scope('Rel'):
+    with tf.compat.v1.variable_scope('Rel'):
       # (n x b x d) o (d x r x d) o (n x b x d).T -> (n x b x r x b)
       rel_logits = self.bilinear(rel_dep_mlp, rel_head_mlp, len(self.vocabs['rels']))
       # (n x b x r x b)
-      rel_probs = tf.nn.softmax(rel_logits, dim=2)
+      rel_probs = tf.nn.softmax(rel_logits, axis=2)
       # (n x b x b)
       one_hot = tf.one_hot(arc_preds if moving_params is not None else arc_targets, self.bucket_size)
       # (n x b x b) -> (n x b x b x 1)
@@ -90,19 +90,19 @@ class GamaParser(BaseParser):
       # (n x b x r x 1) -> (n x b x r)
       select_rel_logits = tf.squeeze(select_rel_logits, axis=3)
       # (n x b)
-      rel_preds = tf.to_int32(tf.argmax(select_rel_logits, axis=-1))
+      rel_preds = tf.cast(tf.argmax(input=select_rel_logits, axis=-1), dtype=tf.int32)
       # (n x b)
       rel_targets = self.vocabs['rels'].placeholder
       # (n x b)
-      rel_correct = tf.to_int32(tf.equal(rel_preds, rel_targets))*int_tokens_to_keep
+      rel_correct = tf.cast(tf.equal(rel_preds, rel_targets), dtype=tf.int32)*int_tokens_to_keep
       # ()
-      rel_loss = tf.losses.sparse_softmax_cross_entropy(rel_targets, select_rel_logits, self.tokens_to_keep)
+      rel_loss = tf.compat.v1.losses.sparse_softmax_cross_entropy(rel_targets, select_rel_logits, self.tokens_to_keep)
     
-    n_arc_correct = tf.reduce_sum(arc_correct)
-    n_rel_correct = tf.reduce_sum(rel_correct)
+    n_arc_correct = tf.reduce_sum(input_tensor=arc_correct)
+    n_rel_correct = tf.reduce_sum(input_tensor=rel_correct)
     correct = arc_correct * rel_correct
-    n_correct = tf.reduce_sum(correct)
-    n_seqs_correct = tf.reduce_sum(tf.to_int32(tf.equal(tf.reduce_sum(correct, axis=1), self.sequence_lengths-1)))
+    n_correct = tf.reduce_sum(input_tensor=correct)
+    n_seqs_correct = tf.reduce_sum(input_tensor=tf.cast(tf.equal(tf.reduce_sum(input_tensor=correct, axis=1), self.sequence_lengths-1), dtype=tf.int32))
     loss = arc_loss + rel_loss
     
     outputs = {

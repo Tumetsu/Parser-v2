@@ -33,32 +33,32 @@ class XTagger(BaseXTagger):
     """ """
     
     top_recur = super(XTagger, self).__call__(vocabs, moving_params=moving_params)
-    int_tokens_to_keep = tf.to_int32(self.tokens_to_keep)
+    int_tokens_to_keep = tf.cast(self.tokens_to_keep, dtype=tf.int32)
     
-    with tf.variable_scope('MLP'):
+    with tf.compat.v1.variable_scope('MLP'):
       tag_mlp, xtag_mlp = self.MLP(top_recur, self.mlp_size, n_splits=2)
     
-    with tf.variable_scope('Tag'):
+    with tf.compat.v1.variable_scope('Tag'):
       tag_logits = self.linear(tag_mlp, len(self.vocabs['tags']))
       tag_probs = tf.nn.softmax(tag_logits)
-      tag_preds = tf.to_int32(tf.argmax(tag_logits, axis=-1))
+      tag_preds = tf.cast(tf.argmax(input=tag_logits, axis=-1), dtype=tf.int32)
       tag_targets = self.vocabs['tags'].placeholder
-      tag_correct = tf.to_int32(tf.equal(tag_preds, tag_targets))*int_tokens_to_keep
-      tag_loss = tf.losses.sparse_softmax_cross_entropy(tag_targets, tag_logits, self.tokens_to_keep)
+      tag_correct = tf.cast(tf.equal(tag_preds, tag_targets), dtype=tf.int32)*int_tokens_to_keep
+      tag_loss = tf.compat.v1.losses.sparse_softmax_cross_entropy(tag_targets, tag_logits, self.tokens_to_keep)
     
-    with tf.variable_scope('XTag'):
+    with tf.compat.v1.variable_scope('XTag'):
       xtag_logits = self.linear(xtag_mlp, len(self.vocabs['xtags']))
       xtag_probs = tf.nn.softmax(xtag_logits)
-      xtag_preds = tf.to_int32(tf.argmax(xtag_logits, axis=-1))
+      xtag_preds = tf.cast(tf.argmax(input=xtag_logits, axis=-1), dtype=tf.int32)
       xtag_targets = self.vocabs['xtags'].placeholder
-      xtag_correct = tf.to_int32(tf.equal(xtag_preds, xtag_targets))*int_tokens_to_keep
-      xtag_loss = tf.losses.sparse_softmax_cross_entropy(xtag_targets, xtag_logits, self.tokens_to_keep)
+      xtag_correct = tf.cast(tf.equal(xtag_preds, xtag_targets), dtype=tf.int32)*int_tokens_to_keep
+      xtag_loss = tf.compat.v1.losses.sparse_softmax_cross_entropy(xtag_targets, xtag_logits, self.tokens_to_keep)
     
     correct = tag_correct * xtag_correct
-    n_correct = tf.reduce_sum(correct)
-    n_tag_correct = tf.reduce_sum(tag_correct)
-    n_xtag_correct = tf.reduce_sum(xtag_correct)
-    n_seqs_correct = tf.reduce_sum(tf.to_int32(tf.equal(tf.reduce_sum(correct, axis=1), self.sequence_lengths-1)))
+    n_correct = tf.reduce_sum(input_tensor=correct)
+    n_tag_correct = tf.reduce_sum(input_tensor=tag_correct)
+    n_xtag_correct = tf.reduce_sum(input_tensor=xtag_correct)
+    n_seqs_correct = tf.reduce_sum(input_tensor=tf.cast(tf.equal(tf.reduce_sum(input_tensor=correct, axis=1), self.sequence_lengths-1), dtype=tf.int32))
     loss = tag_loss + xtag_loss
     
     outputs = {

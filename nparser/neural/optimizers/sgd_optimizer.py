@@ -41,7 +41,7 @@ class SGDOptimizer(BaseOptimizer):
     
     g_t, idxs = cache['g_t'], cache['idxs']
     idxs, idxs_ = tf.unique(idxs)
-    g_t_ = tf.unsorted_segment_sum(g_t, idxs_, tf.size(idxs))
+    g_t_ = tf.math.unsorted_segment_sum(g_t, idxs_, tf.size(input=idxs))
     
     cache['g_t'] = g_t_
     cache['idxs'] = idxs

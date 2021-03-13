@@ -35,10 +35,10 @@ class MLPEmbed(BaseEmbed):
     # (n x b x d)
     embeddings = super(MLPEmbed, self).__call__(vocab, **kwargs)
     # (n x b x d) -> (n x d)
-    with tf.variable_scope('Attn'):
+    with tf.compat.v1.variable_scope('Attn'):
       attn = self.linear_attention(embeddings)
     # (n x d) -> (n x h)
-    with tf.variable_scope('MLP'):
+    with tf.compat.v1.variable_scope('MLP'):
       hidden = self.MLP(attn, self.mlp_size)
     # (n x h) -> (n x o)
     linear = self.linear(hidden, vocab.token_embed_size)

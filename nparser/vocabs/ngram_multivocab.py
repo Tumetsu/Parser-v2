@@ -98,7 +98,7 @@ class NgramMultivocab(Multivocab, SubtokenVocab):
     """ """
     
     if moving_params is None:
-      shape = tf.shape(placeholders)
+      shape = tf.shape(input=placeholders)
       shape = tf.stack([shape[0], 1, shape[2]])
       placeholders = la.random_where(embed_keep_prob, placeholders, self.UNK, shape=shape)
     embeddings = [vocab.embedding_lookup(placeholders[:,:,i], embed_keep_prob=1, moving_params=moving_params) for i, vocab in enumerate(self)]
@@ -128,4 +128,3 @@ if __name__ == '__main__':
   print("Indices for 'the': %s" % str(ngram_multivocab.index('the')),file=sys.stderr)
   print("Indices for 'The': %s" % str(ngram_multivocab.index('The')),file=sys.stderr)
   print('NgramMultivocab passes',file=sys.stderr)
-  

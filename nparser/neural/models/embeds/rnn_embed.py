@@ -36,7 +36,7 @@ class RNNEmbed(BaseEmbed):
     # (n x b x d)
     embeddings = super(RNNEmbed, self).__call__(vocab, **kwargs)
     # (n x b x d) -> (n x b x h)
-    with tf.variable_scope('RNN'):
+    with tf.compat.v1.variable_scope('RNN'):
       recur, state = self.RNN(embeddings, self.recur_size)
     if self.rnn_func == rnn.birnn:
       state_fw, state_bw = tf.unstack(state)
@@ -46,7 +46,7 @@ class RNNEmbed(BaseEmbed):
     elif self.rnn_func == rnn.rnn:
       state = tf.split(state, 2, axis=1)[0]
     # (n x b x h) -> (n x h)
-    with tf.variable_scope('MLP'):
+    with tf.compat.v1.variable_scope('MLP'):
       hidden = self.linear_attention(recur)
     # (n x h) -> (n x o)
     linear = self.linear(tf.concat([hidden, state], axis=1), vocab.token_embed_size)

@@ -49,7 +49,7 @@ class IndexVocab(Configurable):
     """ """
     
     if self.placeholder is None:
-      self.placeholder = tf.placeholder(tf.int32, shape=[None, None], name=self.name)
+      self.placeholder = tf.compat.v1.placeholder(tf.int32, shape=[None, None], name=self.name)
     return self.placeholder
   
   #=============================================================

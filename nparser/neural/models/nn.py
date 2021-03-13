@@ -30,8 +30,8 @@ from nparser.configurable import Configurable
 class NN(Configurable):
   """ """
   
-  ZERO = tf.convert_to_tensor(0.)
-  ONE = tf.convert_to_tensor(1.)
+  ZERO = tf.convert_to_tensor(value=0.)
+  ONE = tf.convert_to_tensor(value=1.)
   
   #=============================================================
   def __init__(self, *args, **kwargs):
@@ -63,7 +63,7 @@ class NN(Configurable):
           placeholder = tf.unstack(placeholder, axis=2)[0]
         placeholders.append(placeholder)
         if merge_dict[vocab.name] == vocab.name:
-          drop_mask = tf.expand_dims(linalg.random_mask(vocab.embed_keep_prob, tf.shape(placeholder)), 2)
+          drop_mask = tf.expand_dims(linalg.random_mask(vocab.embed_keep_prob, tf.shape(input=placeholder)), 2)
           drop_masks.append(drop_mask)
       for placeholder in placeholders:
         print(placeholder.graph,file=sys.stderr)
@@ -87,7 +87,7 @@ class NN(Configurable):
     return tf.concat(embeddings, 2)
   
   #=============================================================
-  def linear(self, inputs, output_size, keep_prob=None, n_splits=1, add_bias=True, initializer=tf.zeros_initializer()):
+  def linear(self, inputs, output_size, keep_prob=None, n_splits=1, add_bias=True, initializer=tf.compat.v1.zeros_initializer()):
     """ """
     
     if isinstance(inputs, (list, tuple)):
@@ -103,7 +103,7 @@ class NN(Configurable):
       keep_prob = 1
     if keep_prob < 1:
       noise_shape = tf.stack([self.batch_size] + [1]*(n_dims-2) + [input_size])
-      inputs = tf.nn.dropout(inputs, keep_prob, noise_shape=noise_shape)
+      inputs = tf.nn.dropout(inputs, 1 - (1 - (1 - (1 - (1 - (keep_prob))))), noise_shape=noise_shape)
     
     lin = linalg.linear(inputs,
                         output_size,
@@ -120,7 +120,7 @@ class NN(Configurable):
     return lin
   
   #=============================================================
-  def bilinear(self, inputs1, inputs2, output_size, keep_prob=None, n_splits=1, add_bias1=True, add_bias2=True, initializer=tf.zeros_initializer()):
+  def bilinear(self, inputs1, inputs2, output_size, keep_prob=None, n_splits=1, add_bias1=True, add_bias2=True, initializer=tf.compat.v1.zeros_initializer()):
     """ """
     
     if isinstance(inputs1, (list, tuple)):
@@ -148,8 +148,8 @@ class NN(Configurable):
     if keep_prob < 1:
       noise_shape1 = tf.stack([self.batch_size] + [1]*(n_dims1-2) + [inputs1_size])
       noise_shape2 = tf.stack([self.batch_size] + [1]*(n_dims2-2) + [inputs2_size])
-      inputs1 = tf.nn.dropout(inputs1, keep_prob, noise_shape=noise_shape1)
-      inputs2 = tf.nn.dropout(inputs2, keep_prob, noise_shape=noise_shape2)
+      inputs1 = tf.nn.dropout(inputs1, 1 - (1 - (1 - (1 - (1 - (keep_prob))))), noise_shape=noise_shape1)
+      inputs2 = tf.nn.dropout(inputs2, 1 - (1 - (1 - (1 - (1 - (keep_prob))))), noise_shape=noise_shape2)
     
     bilin = linalg.bilinear(inputs1, inputs2, output_size,
                             n_splits,
@@ -182,7 +182,7 @@ class NN(Configurable):
       keep_prob = 1
       
     if keep_prob < 1:
-      inputs = tf.nn.dropout(inputs, keep_prob)
+      inputs = tf.nn.dropout(inputs, 1 - (1 - (1 - (1 - (1 - (keep_prob))))))
     
     conv = linalg.convolutional(inputs,
                                 window_size,

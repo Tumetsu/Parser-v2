@@ -48,9 +48,9 @@ class RetrainedVocab(BaseVocab):
     """ """
     
     embed_size = self.embed_size
-    row_idxs = tf.placeholder(tf.int32, shape=(None,), name='row_idxs')
-    col_idxs = tf.placeholder(tf.int32, shape=(None,), name='col_idxs')
-    S, U, _ = tf.svd(self.pretrained_vocab.embeddings)
+    row_idxs = tf.compat.v1.placeholder(tf.int32, shape=(None,), name='row_idxs')
+    col_idxs = tf.compat.v1.placeholder(tf.int32, shape=(None,), name='col_idxs')
+    S, U, _ = tf.linalg.svd(self.pretrained_vocab.embeddings)
     self.embeddings = U[:,:embed_size] * S[:embed_size]
     
     old_rows = tf.gather(self.pretrained_vocab.embeddings, row_idxs)
@@ -63,9 +63,9 @@ class RetrainedVocab(BaseVocab):
     if self.embed_loss == 'cross_entropy':
       old_matmul = tf.expand_dims(tf.nn.softmax(old_matmul), axis=1)
       new_matmul = tf.expand_dims(tf.nn.softmax(new_matmul), axis=2)
-      loss = -tf.reduce_sum(tf.matmul(old_matmul, tf.log(new_matmul))) / tf.to_float(tf.shape(row_idxs)[0])
+      loss = -tf.reduce_sum(input_tensor=tf.matmul(old_matmul, tf.math.log(new_matmul))) / tf.cast(tf.shape(input=row_idxs)[0], dtype=tf.float32)
     elif self.embed_loss == 'l2_loss':
-      loss = tf.reduce_sum((old_matmul - new_matmul)**2 / 2) / tf.to_float(tf.shape(row_idxs)[0])
+      loss = tf.reduce_sum(input_tensor=(old_matmul - new_matmul)**2 / 2) / tf.cast(tf.shape(input=row_idxs)[0], dtype=tf.float32)
     else:
       raise ValueError('embed_loss must be in "(cross_entropy, l2_loss)"')
     

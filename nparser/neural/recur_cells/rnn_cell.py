@@ -32,7 +32,7 @@ class RNNCell(BaseCell):
   def __call__(self, inputs, state, scope=None):
     """ """
     
-    with tf.variable_scope(scope or type(self).__name__):
+    with tf.compat.v1.variable_scope(scope or type(self).__name__):
       inputs_list = [inputs, state]
       hidden_act = linear(inputs_list,
                           self.output_size,

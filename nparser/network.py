@@ -118,13 +118,13 @@ class Network(Configurable):
     self.add_file_vocabs(self.parse_files)
     self.setup_vocabs()
     trainset = Trainset.from_configurable(self, self.vocabs, nlp_model=self.nlp_model)
-    with tf.variable_scope(self.name.title()):
+    with tf.compat.v1.variable_scope(self.name.title()):
       train_tensors = trainset()
-    train = self.optimizer(tf.losses.get_total_loss())
+    train = self.optimizer(tf.compat.v1.losses.get_total_loss())
     train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
-    saver = tf.train.Saver(self.save_vars, max_to_keep=1)
+    saver = tf.compat.v1.train.Saver(self.save_vars, max_to_keep=1)
     validset = Parseset.from_configurable(self, self.vocabs, nlp_model=self.nlp_model)
-    with tf.variable_scope(self.name.title(), reuse=True):
+    with tf.compat.v1.variable_scope(self.name.title(), reuse=True):
       valid_tensors = validset(moving_params=self.optimizer)
     valid_outputs = [valid_tensors[train_key] for train_key in validset.train_keys]
     valid_outputs2 = [valid_tensors[valid_key] for valid_key in validset.valid_keys]
@@ -148,13 +148,13 @@ class Network(Configurable):
       self.history = {'train': defaultdict(list), 'valid': defaultdict(list)}
     
     # start up the session
-    config_proto = tf.ConfigProto()
+    config_proto = tf.compat.v1.ConfigProto()
     #if self.per_process_gpu_memory_fraction == -1:
     config_proto.gpu_options.allow_growth = True
     #else:
     #  config_proto.gpu_options.per_process_gpu_memory_fraction = self.per_process_gpu_memory_fraction
-    with tf.Session(config=config_proto) as sess:
-      sess.run(tf.global_variables_initializer())
+    with tf.compat.v1.Session(config=config_proto) as sess:
+      sess.run(tf.compat.v1.global_variables_initializer())
       if load:
         saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
       total_train_iters = sess.run(self.global_step)
@@ -223,7 +223,7 @@ class Network(Configurable):
       saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
       for input_file in input_files:
         parseset = Parseset.from_configurable(self, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
-        with tf.variable_scope(self.name.title(), reuse=True):
+        with tf.compat.v1.variable_scope(self.name.title(), reuse=True):
           parse_tensors = parseset(moving_params=self.optimizer)
         parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
 
@@ -320,23 +320,23 @@ class Network(Configurable):
         raise ValueError('Cannot provide a value for --output_file when parsing multiple files')
       
     with tf.Graph().as_default():
-      config_proto = tf.ConfigProto()
-      if self.per_process_gpu_memory_fraction == -1:
-        config_proto.gpu_options.allow_growth = True
-      else:
-        config_proto.gpu_options.per_process_gpu_memory_fraction = self.per_process_gpu_memory_fraction
-      with tf.Session(config=config_proto) as sess:
+      config_proto = tf.compat.v1.ConfigProto()
+      # if self.per_process_gpu_memory_fraction == -1:
+      config_proto.gpu_options.allow_growth = True
+      # else:
+      #   config_proto.gpu_options.per_process_gpu_memory_fraction = self.per_process_gpu_memory_fraction
+      with tf.compat.v1.Session(config=config_proto) as sess:
         # load the model and prep the parse set
 
         print("SELF.TRAIN_FILES",self.train_files,file=sys.stderr)
         self.add_file_vocabs(self.train_files)
         self.setup_vocabs()
         trainset = Trainset.from_configurable(self, self.vocabs, nlp_model=self.nlp_model)
-        with tf.variable_scope(self.name.title()):
+        with tf.compat.v1.variable_scope(self.name.title()):
           train_tensors = trainset()
         train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
 
-        saver = tf.train.Saver(self.save_vars, max_to_keep=1)
+        saver = tf.compat.v1.train.Saver(self.save_vars, max_to_keep=1)
         for var in self.non_save_vars:
           sess.run(var.initializer)
         saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
@@ -352,7 +352,7 @@ class Network(Configurable):
           #print("Beg Parseset.from_configurable")
           parseset = Parseset.from_configurable(self, self.vocabs, parse_files=input_file, nlp_model=self.nlp_model)
           #print("Done Parseset.from_configurable")
-          with tf.variable_scope(self.name.title(), reuse=True):
+          with tf.compat.v1.variable_scope(self.name.title(), reuse=True):
             parse_tensors = parseset(moving_params=self.optimizer)
           parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
 
@@ -390,30 +390,30 @@ class Network(Configurable):
         found in self.current_input which should be an open file or StringIO"""
 
     with tf.Graph().as_default():
-      config_proto = tf.ConfigProto()
-      if self.per_process_gpu_memory_fraction == -1:
-        config_proto.gpu_options.allow_growth = True
-      else:
-        config_proto.gpu_options.per_process_gpu_memory_fraction = self.per_process_gpu_memory_fraction
-      with tf.Session(config=config_proto) as sess:
+      config_proto = tf.compat.v1.ConfigProto()
+      # if self.per_process_gpu_memory_fraction == -1:
+      config_proto.gpu_options.allow_growth = True
+      # else:
+      #   config_proto.gpu_options.per_process_gpu_memory_fraction = self.per_process_gpu_memory_fraction
+      with tf.compat.v1.Session(config=config_proto) as sess:
         # load the model and prep the parse set
 
         print("SELF.TRAIN_FILES",self.train_files,file=sys.stderr)
         self.add_file_vocabs(self.train_files)
         self.setup_vocabs()
         trainset = Trainset.from_configurable(self, self.vocabs, nlp_model=self.nlp_model)
-        with tf.variable_scope(self.name.title()):
+        with tf.compat.v1.variable_scope(self.name.title()):
           train_tensors = trainset()
         train_outputs = [train_tensors[train_key] for train_key in trainset.train_keys]
 
-        saver = tf.train.Saver(self.save_vars, max_to_keep=1)
+        saver = tf.compat.v1.train.Saver(self.save_vars, max_to_keep=1)
         for var in self.non_save_vars:
           sess.run(var.initializer)
         saver.restore(sess, tf.train.latest_checkpoint(self.save_dir))
 
         # create parseset outside of the while loop
         parseset = Parseset.from_configurable(self, self.vocabs, parse_files=self.current_input, nlp_model=self.nlp_model)
-        with tf.variable_scope(self.name.title(), reuse=True):
+        with tf.compat.v1.variable_scope(self.name.title(), reuse=True):
           parse_tensors = parseset(moving_params=self.optimizer)
         parse_outputs = [parse_tensors[parse_key] for parse_key in parseset.parse_keys]
 
@@ -455,10 +455,10 @@ class Network(Configurable):
     return self._optimizer
   @property
   def save_vars(self):
-    return [x for x in tf.global_variables() if 'Pretrained/Embeddings:0' != x.name]
+    return [x for x in tf.compat.v1.global_variables() if 'Pretrained/Embeddings:0' != x.name]
   @property
   def non_save_vars(self):
-    return [x for x in tf.global_variables() if 'Pretrained/Embeddings:0' == x.name]
+    return [x for x in tf.compat.v1.global_variables() if 'Pretrained/Embeddings:0' == x.name]
   @property
   def global_step(self):
     return self._global_step

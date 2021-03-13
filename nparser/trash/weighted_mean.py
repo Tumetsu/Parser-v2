@@ -32,13 +32,13 @@ class WeightedMean(NN):
   def __call__(self, vocab, output_size, moving_params=None):
     """ """
     
-    inputs = tf.placeholder(tf.int32, shape=(None,None), name='inputs-%s' % self.name)
+    inputs = tf.compat.v1.placeholder(tf.int32, shape=(None,None), name='inputs-%s' % self.name)
     
-    self.tokens_to_keep = tf.to_float(tf.greater(inputs, vocab.PAD))
-    self.sequence_lengths = tf.reduce_sum(self.tokens_to_keep, axis=1, keep_dims=True)
-    self.n_tokens = tf.reduce_sum(self.sequence_lengths)
-    self.batch_size = tf.shape(inputs)[0]
-    self.bucket_size = tf.shape(inputs)[1]
+    self.tokens_to_keep = tf.cast(tf.greater(inputs, vocab.PAD), dtype=tf.float32)
+    self.sequence_lengths = tf.reduce_sum(input_tensor=self.tokens_to_keep, axis=1, keepdims=True)
+    self.n_tokens = tf.reduce_sum(input_tensor=self.sequence_lengths)
+    self.batch_size = tf.shape(input=inputs)[0]
+    self.bucket_size = tf.shape(input=inputs)[1]
     self.moving_params = moving_params
     
     embeddings = vocab.embedding_lookup(inputs, moving_params=self.moving_params)
